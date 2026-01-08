@@ -67,7 +67,7 @@ document.addEventListener("keyup", (event) => {
     addNoteStartTime(event.timeStamp)
     const el = document.createElement("div")
     el.id = "keyup-event"
-    el.textContent = `\u2191 ${duration}ms` // &uarr; up arrow (but textContent is better than innerHTML)
+    el.textContent = `\u2191 ${duration.toFixed(2)}ms` // &uarr; up arrow (but textContent is better than innerHTML)
     recordedSequenceDiv.appendChild(el)
 })
 
