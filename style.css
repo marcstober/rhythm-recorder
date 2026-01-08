@@ -1,0 +1,24 @@
+#viz {
+    height: 100px;
+}
+
+#tap-area {
+    margin: 1rem 0;
+    padding: 1.25rem;
+    text-align: center;
+    border: 2px dashed #888;
+    border-radius: 12px;
+    cursor: pointer;
+    touch-action: manipulation;
+    background: #f7f7f7;
+}
+
+/* TODO: consider adding this back, but need to fix issue 
+    that it doesn't stay in this state when the user holds the tap */
+/* #tap-area:active {
+    background: #e6e6e6;
+} */
+
+.no-select {
+    user-select: none;
+}

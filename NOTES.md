@@ -1,3 +1,14 @@
+# Alternate CSS
+
+```html
+<link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
+/>
+```
+
+# Some other info I got from Copilot when researching charts (didn't use any of these)
+
 Here’s the clearest, most grounded comparison of **Frappe Charts**, **Chart‑Ease**, **MinimalBarChart**, and **Observable Plot**, using the factual material from the search results about Observable Plot.
 
 ---

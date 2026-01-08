@@ -7,24 +7,17 @@ let noteStartTimes = []
 
 // TODO: is it still be practice to use DomContentLoaded or something?
 const recordedSequenceDiv = document.getElementById("recorded-sequence")
+const tapArea = document.getElementById("tap-area")
+let isUsingTouch = false
 
-document.addEventListener("keydown", (event) => {
-    // Only process keydown if the key is not already pressed
+function recordNoteStart(keyLabel, timeStamp) {
+    // Only process keydown if the key (or tap area) is not already pressed
     if (!keysPressed.has(event.key)) {
         const timeSinceLastKeyDown =
-            lastKeyDownTime !== null ? event.timeStamp - lastKeyDownTime : null
+            lastKeyDownTime !== null ? timeStamp - lastKeyDownTime : null
 
-        keysPressed.set(event.key, event.timeStamp)
-        lastKeyDownTime = event.timeStamp
-
-        const timeSinceText =
-            timeSinceLastKeyDown !== null
-                ? ` - ${timeSinceLastKeyDown.toFixed(2)}ms since last keydown`
-                : ""
-
-        const messageText = `Key "${event.key}" pressed  [event: keydown] at ${event.timeStamp}${timeSinceText}`
-
-        // document.getElementById("last-key").textContent = messageText
+        keysPressed.set(keyLabel, timeStamp)
+        lastKeyDownTime = timeStamp
 
         // remove last keyup-event element if it exists
         const lastKeyupEl = document.getElementById("keyup-event")
@@ -33,42 +26,59 @@ document.addEventListener("keydown", (event) => {
             recordedSequenceDiv.removeChild(lastKeyupEl)
         }
 
-        // if (timeSinceLastKeyDown !== null) {
         // add element to recorded sequence
-        addNoteStartTime(event.timeStamp)
+        addNoteStartTime(timeStamp)
         const el = document.createElement("div")
         el.textContent = `\u2193 ${(timeSinceLastKeyDown || 0).toFixed(2)}ms` // &darr; down arrow (but textContent is better than innerHTML)
         recordedSequenceDiv.appendChild(el)
-        // } else {
-        //     console.log("first keydown, not recording time")
-        // }
+    }
+}
+
+document.addEventListener("keydown", (event) => {
+    recordNoteStart(event.key, event.timeStamp)
+})
+
+tapArea.addEventListener("pointerdown", (event) => {
+    isUsingTouch = event.pointerType === "touch"
+    tapArea.classList.toggle("no-select", isUsingTouch)
+    recordNoteStart("tap", event.timeStamp)
+    event.preventDefault()
+})
+
+tapArea.addEventListener("contextmenu", (e) => {
+    if (isUsingTouch) {
+        e.preventDefault()
     }
 })
 
-document.addEventListener("keyup", (event) => {
-    const pressedTime = keysPressed.get(event.key)
-    const duration = event.timeStamp - pressedTime
-    keysPressed.delete(event.key)
+function recordNoteStop(keyLabel, timeStamp) {
+    const pressedTime = keysPressed.get(keyLabel)
+    const duration = timeStamp - pressedTime
+    keysPressed.delete(keyLabel)
 
     console.log(
-        `Key "${
-            event.key
-        }" released  [event: keyup] - duration: ${duration.toFixed(2)}ms`
+        `Key "${keyLabel}" released  [event: keyup] - duration: ${duration.toFixed(
+            2
+        )}ms`
     )
-    // const lastKeyEl = document.getElementById("last-key")
-    // lastKeyEl.textContent = `Key "${event.key}" released  [event: keyup] at ${
-    //     event.timeStamp
-    // } - duration: ${duration.toFixed(2)}ms`
     console.log(noteStartTimes)
 
     // Record keyup as the last recorded event.
     // But, when the next key is down, replace it with the
     // time since last keydown.
-    addNoteStartTime(event.timeStamp)
+    addNoteStartTime(timeStamp)
     const el = document.createElement("div")
     el.id = "keyup-event"
     el.textContent = `\u2191 ${duration.toFixed(2)}ms` // &uarr; up arrow (but textContent is better than innerHTML)
     recordedSequenceDiv.appendChild(el)
+}
+
+document.addEventListener("keyup", (event) => {
+    recordNoteStop(event.key, event.timeStamp)
+})
+
+tapArea.addEventListener("pointerup", (event) => {
+    recordNoteStop("tap", event.timeStamp)
 })
 
 function addNoteStartTime(time) {
@@ -102,7 +112,7 @@ function drawChart() {
         .data(noteStartTimes)
         .join("rect")
         .attr("x", (d) => x(d))
-        .attr("y", 0)
+        .attr("y", 22)
         .attr("height", 50)
         .attr("width", (d, i) => {
             const nextIndex = i + 1
