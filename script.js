@@ -1,9 +1,18 @@
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm"
 
+// TODO - BUGS:
+// * why does the tap area change color on touch but not stay that way while holding, I don't have any styles? (on Windows)
+// * It seems like there is *always* a width-less-than 1 warning about a width of 0,
+//  don't think this should happen? Maybe related: should there really be a time of 0 in the displayed list?
+//  I.e., it is a list of start times or durations? Seems like these concepts might have gotten mixed up.
+
 const keysPressed = new Map()
 let lastKeyDownTime = null
 let firstNoteStartTime
 let noteStartTimes = []
+
+// Keys to ignore when recording notes (reserved for browser navigation, shortcuts, etc.)
+const ignoredKeys = ["Control", "Alt", "Shift", "Tab"]
 
 // TODO: is it still be practice to use DomContentLoaded or something?
 const recordedSequenceDiv = document.getElementById("recorded-sequence")
@@ -12,7 +21,7 @@ let isUsingTouch = false
 
 function recordNoteStart(keyLabel, timeStamp) {
     // Only process keydown if the key (or tap area) is not already pressed
-    if (!keysPressed.has(event.key)) {
+    if (!keysPressed.has(keyLabel)) {
         const timeSinceLastKeyDown =
             lastKeyDownTime !== null ? timeStamp - lastKeyDownTime : null
 
@@ -35,7 +44,9 @@ function recordNoteStart(keyLabel, timeStamp) {
 }
 
 document.addEventListener("keydown", (event) => {
-    recordNoteStart(event.key, event.timeStamp)
+    if (!ignoredKeys.includes(event.key)) {
+        recordNoteStart(event.key, event.timeStamp)
+    }
 })
 
 tapArea.addEventListener("pointerdown", (event) => {
@@ -63,9 +74,9 @@ function recordNoteStop(keyLabel, timeStamp) {
     )
     console.log(noteStartTimes)
 
-    // Record keyup as the last recorded event.
-    // But, when the next key is down, replace it with the
-    // time since last keydown.
+    // When user stops tapping, record end of the last tap.
+    // But, when the next tap starts, we'll replace it with the
+    // time since the start of the previous tap.
     addNoteStartTime(timeStamp)
     const el = document.createElement("div")
     el.id = "keyup-event"
@@ -74,11 +85,21 @@ function recordNoteStop(keyLabel, timeStamp) {
 }
 
 document.addEventListener("keyup", (event) => {
-    recordNoteStop(event.key, event.timeStamp)
+    if (!ignoredKeys.includes(event.key)) {
+        recordNoteStop(event.key, event.timeStamp)
+    }
 })
 
 tapArea.addEventListener("pointerup", (event) => {
     recordNoteStop("tap", event.timeStamp)
+})
+
+tapArea.addEventListener("pointerout", (event) => {
+    // If pointer leaves tap area while held, stop.
+    // (Otherwise tap could get "stuck running" if pointerup outside tap area.)
+    if (keysPressed.has("tap")) {
+        recordNoteStop("tap", event.timeStamp)
+    }
 })
 
 function addNoteStartTime(time) {
@@ -89,7 +110,7 @@ function addNoteStartTime(time) {
         noteStartTimes.push(time - firstNoteStartTime)
     }
 
-    drawChart()
+    animate()
     console.log(noteStartTimes)
 }
 
@@ -100,7 +121,10 @@ function drawChart() {
 
     const svg = d3.create("svg").attr("width", width).attr("height", 100)
 
-    let lastRecordedTime = noteStartTimes[noteStartTimes.length - 1] || 0
+    let lastRecordedTime =
+        keysPressed.size === 0
+            ? noteStartTimes[noteStartTimes.length - 1] || 0
+            : performance.now() - firstNoteStartTime
 
     const x = d3.scaleLinear().domain([0, lastRecordedTime]).range([0, width])
 
@@ -135,9 +159,17 @@ function drawChart() {
     document.getElementById("viz").innerHTML = ""
 
     document.getElementById("viz").appendChild(svg.node())
-
-    // document.getElementById("viz").textContent = noteStartTimes.join(", ")
-
-    // requestAnimationFrame(animate)
 }
-// animate()
+
+function animate() {
+    console.log("animation running")
+    drawChart()
+
+    // animate while "note" is being held
+    if (keysPressed.size > 0) {
+        requestAnimationFrame(animate)
+    } else {
+        // leave this in for testing
+        console.log("animation stopped")
+    }
+}
