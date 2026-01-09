@@ -14,3 +14,4 @@
     In particular, test this on Edge on Windows, since scrollbars there "take up space"
     rather than being an "overlay" like on MacOS, and the latest versions of Edge support
     `scrollbar-gutter: stable;` in CSS.
+-   Test in dark mode.

@@ -131,11 +131,11 @@ function drawChart() {
 
     svg.append("g")
         .attr("fill", "#787070")
-        .attr("stroke", "white")
         .attr("stroke-width", 1)
         .selectAll()
         .data(noteStartTimes)
         .join("rect")
+        .attr("class", "note-rect")
         .attr("x", (d) => x(d))
         .attr("y", 22)
         .attr("height", 50)

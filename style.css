@@ -6,8 +6,16 @@ html {
     height: 100px;
 }
 
+.note-rect {
+    stroke: white;
+
+    @media (prefers-color-scheme: dark) {
+        /* water.css variable for dark mode background */
+        stroke: var(--background-body);
+    }
+}
+
 #tap-area {
-    --tap-bg-color: #f7f7f7;
     margin: 1rem 0;
     padding: 1.25rem;
     text-align: center;
@@ -15,13 +23,7 @@ html {
     border-radius: 12px;
     cursor: pointer;
     touch-action: manipulation;
-    background: var(--tap-bg-color);
-}
-
-/* Override Water.css's default :active styling to prevent color change on tap
-    (because the color change doesn't stay when holding the tap and that's suboptimal UX) */
-#tap-area:active {
-    background: var(--tap-bg-color);
+    -webkit-tap-highlight-color: transparent; /* Remove grey highlight on mobile */
 }
 
 .no-select {
