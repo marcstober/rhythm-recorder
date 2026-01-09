@@ -1,7 +1,6 @@
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm"
 
 // TODO - BUGS:
-// * why does the tap area change color on touch but not stay that way while holding, I don't have any styles? (on Windows)
 // * It seems like there is *always* a width-less-than 1 warning about a width of 0,
 //  don't think this should happen? Maybe related: should there really be a time of 0 in the displayed list?
 //  I.e., it is a list of start times or durations? Seems like these concepts might have gotten mixed up.

@@ -7,6 +7,7 @@ html {
 }
 
 #tap-area {
+    --tap-bg-color: #f7f7f7;
     margin: 1rem 0;
     padding: 1.25rem;
     text-align: center;
@@ -14,14 +15,14 @@ html {
     border-radius: 12px;
     cursor: pointer;
     touch-action: manipulation;
-    background: #f7f7f7;
+    background: var(--tap-bg-color);
 }
 
-/* TODO: consider adding this back, but need to fix issue 
-    that it doesn't stay in this state when the user holds the tap */
-/* #tap-area:active {
-    background: #e6e6e6;
-} */
+/* Override Water.css's default :active styling to prevent color change on tap
+    (because the color change doesn't stay when holding the tap and that's suboptimal UX) */
+#tap-area:active {
+    background: var(--tap-bg-color);
+}
 
 .no-select {
     user-select: none;
