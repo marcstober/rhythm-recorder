@@ -1,3 +1,7 @@
+html {
+    scrollbar-gutter: stable;
+}
+
 #viz {
     height: 100px;
 }
