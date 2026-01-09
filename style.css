@@ -27,5 +27,6 @@ html {
 }
 
 .no-select {
+    -webkit-user-select: none; /* needed for iOS Safari? */
     user-select: none;
 }
