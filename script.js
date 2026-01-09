@@ -2,8 +2,7 @@ import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm"
 
 // TODO - BUGS:
 // * It seems like there is *always* a width-less-than 1 warning about a width of 0,
-//  don't think this should happen? Maybe related: should there really be a time of 0 in the displayed list?
-//  I.e., it is a list of start times or durations? Seems like these concepts might have gotten mixed up.
+//  don't think this should happen?
 
 const keysPressed = new Map()
 let lastKeyDownTime = null
@@ -13,7 +12,7 @@ let noteStartTimes = []
 // Keys to ignore when recording notes (reserved for browser navigation, shortcuts, etc.)
 const ignoredKeys = ["Control", "Alt", "Shift", "Tab"]
 
-// TODO: is it still be practice to use DomContentLoaded or something?
+// TODO: is it still best practice to use DomContentLoaded or something before accessing DOM elements?
 const recordedSequenceDiv = document.getElementById("recorded-sequence")
 const tapArea = document.getElementById("tap-area")
 let isUsingTouch = false
@@ -36,9 +35,12 @@ function recordNoteStart(keyLabel, timeStamp) {
 
         // add element to recorded sequence
         addNoteStartTime(timeStamp)
-        const el = document.createElement("div")
-        el.textContent = `\u2193 ${(timeSinceLastKeyDown || 0).toFixed(2)}ms` // &darr; down arrow (but textContent is better than innerHTML)
-        recordedSequenceDiv.appendChild(el)
+        // note that we are actually displaing durations between key events (at least for now)
+        if (timeSinceLastKeyDown) {
+            const el = document.createElement("div")
+            el.textContent = `\u2193 ${timeSinceLastKeyDown.toFixed(2)}ms` // &darr; down arrow (but textContent is better than innerHTML)
+            recordedSequenceDiv.appendChild(el)
+        }
     }
 }
 
@@ -149,7 +151,6 @@ function drawChart() {
                 console.warn("width less than 1:", w)
                 return 1
             }
-            console.log("width:", w)
             return w
         })
 
