@@ -1,13 +1,46 @@
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm"
+import { signal } from "https://cdn.jsdelivr.net/npm/reefjs@13/dist/reef.es.min.js"
 
 // TODO - BUGS:
+// * Pressing Windows key captures a keydown but not keyup, causing "stuck on" state.
 // * It seems like there is *always* a width-less-than 1 warning about a width of 0,
 //  don't think this should happen?
+// * Redraw chart on window resize.
+// * There is still some way Ctrl-r can result in a rectangle only in half of the visualization.
+// * Problems with how it looks and console errors when pickup note count is more than the number of notes.
 
-const keysPressed = new Map()
-let lastKeyDownTime = null
-let firstNoteStartTime
-let noteStartTimes = []
+/* 
+Should we need multiple "signals" we could use 
+https://reef.gomakethings.com/api/signal/#namespaces
+or else here are Copilot's suggestions other than Reef:
+If you need:
+- dependency tracking
+- nested path detection
+- fine-grained updates
+…then Vue’s reactivity engine or Solid signals are better suited.
+*/
+
+let data = signal({
+    keysPressed: new Map(), // TODO: does reefjs emit signals for changes to Map?
+    mode: "record",
+    lastKeyDownTime: null,
+    firstNoteStartTime: null,
+    pickupNotesCount: 0,
+})
+let noteStartTimes = signal([])
+
+document.addEventListener("reef:signal", function (e) {
+    animate()
+})
+
+// add event handlers to UI elements
+document.getElementById("pickup-notes").addEventListener("input", () => {
+    let n = parseInt(document.getElementById("pickup-notes").value)
+    if (!isNaN(n)) {
+        data.pickupNotesCount = n
+    }
+    // Reef takes care of redrawing chart
+})
 
 // Keys to ignore when recording notes (reserved for browser navigation, shortcuts, etc.)
 const ignoredKeys = ["Control", "Alt", "Shift", "Tab"]
@@ -18,13 +51,19 @@ const tapArea = document.getElementById("tap-area")
 let isUsingTouch = false
 
 function recordNoteStart(keyLabel, timeStamp) {
-    // Only process keydown if the key (or tap area) is not already pressed
-    if (!keysPressed.has(keyLabel)) {
-        const timeSinceLastKeyDown =
-            lastKeyDownTime !== null ? timeStamp - lastKeyDownTime : null
+    if (data.mode !== "record") {
+        return
+    }
 
-        keysPressed.set(keyLabel, timeStamp)
-        lastKeyDownTime = timeStamp
+    // Only process keydown if the key (or tap area) is not already pressed
+    if (!data.keysPressed.has(keyLabel)) {
+        const timeSinceLastKeyDown =
+            data.lastKeyDownTime !== null
+                ? timeStamp - data.lastKeyDownTime
+                : null
+
+        data.keysPressed.set(keyLabel, timeStamp)
+        data.lastKeyDownTime = timeStamp
 
         // remove last keyup-event element if it exists
         const lastKeyupEl = document.getElementById("keyup-event")
@@ -44,8 +83,21 @@ function recordNoteStart(keyLabel, timeStamp) {
     }
 }
 
+function stopAndAnalyze() {
+    data.mode = "analyze"
+    data.keysPressed.clear()
+    document.getElementById("stop-button").style.display = "none"
+    console.log("stopAndAnalyze calling animate...")
+    animate()
+}
+
+// TODO: Maybe set the mode and let reactivity change things?
+document.getElementById("stop-button").addEventListener("click", stopAndAnalyze)
+
 document.addEventListener("keydown", (event) => {
-    if (!ignoredKeys.includes(event.key)) {
+    if (event.key === "Escape") {
+        stopAndAnalyze()
+    } else if (!ignoredKeys.includes(event.key)) {
         recordNoteStart(event.key, event.timeStamp)
     }
 })
@@ -64,9 +116,13 @@ tapArea.addEventListener("contextmenu", (e) => {
 })
 
 function recordNoteStop(keyLabel, timeStamp) {
-    const pressedTime = keysPressed.get(keyLabel)
+    if (data.mode !== "record") {
+        return
+    }
+
+    const pressedTime = data.keysPressed.get(keyLabel)
     const duration = timeStamp - pressedTime
-    keysPressed.delete(keyLabel)
+    data.keysPressed.delete(keyLabel)
 
     console.log(
         `Key "${keyLabel}" released  [event: keyup] - duration: ${duration.toFixed(
@@ -98,20 +154,19 @@ tapArea.addEventListener("pointerup", (event) => {
 tapArea.addEventListener("pointerout", (event) => {
     // If pointer leaves tap area while held, stop.
     // (Otherwise tap could get "stuck running" if pointerup outside tap area.)
-    if (keysPressed.has("tap")) {
+    if (data.keysPressed.has("tap")) {
         recordNoteStop("tap", event.timeStamp)
     }
 })
 
 function addNoteStartTime(time) {
     if (noteStartTimes.length === 0) {
-        firstNoteStartTime = time
+        data.firstNoteStartTime = time
         noteStartTimes.push(0)
     } else {
-        noteStartTimes.push(time - firstNoteStartTime)
+        noteStartTimes.push(time - data.firstNoteStartTime)
     }
 
-    animate()
     console.log(noteStartTimes)
 }
 
@@ -120,15 +175,39 @@ function drawChart() {
 
     const width = document.getElementById("viz").clientWidth
 
+    const margin = { top: 10, bottom: 20 }
+    const chartHeight = 100 - margin.top - margin.bottom
+
     const svg = d3.create("svg").attr("width", width).attr("height", 100)
 
+    let tickValues = Array.from({ length: 21 }, (_, i) => i)
+
     let lastRecordedTime =
-        keysPressed.size === 0
+        data.keysPressed.size === 0
             ? noteStartTimes[noteStartTimes.length - 1] || 0
-            : performance.now() - firstNoteStartTime
+            : performance.now() - data.firstNoteStartTime
 
     const x = d3.scaleLinear().domain([0, lastRecordedTime]).range([0, width])
 
+    if (data.mode === "record") {
+        document.getElementById("stop-button").style.display = "block"
+    } else {
+        const xAxisOriginValue = noteStartTimes[data.pickupNotesCount]
+        const xAxisOffset = x(xAxisOriginValue)
+
+        // x axis
+        const xAxis = d3
+            .axisBottom(
+                d3.scaleLinear().domain([0, 20]).range([xAxisOffset, width])
+            )
+            .tickValues(tickValues)
+        // .tickFormat((d) => `${d} ms`)
+        svg.append("g")
+            .attr("transform", `translate(0, ${chartHeight + margin.top})`)
+            .call(xAxis)
+    }
+
+    // note rectangles
     svg.append("g")
         .attr("fill", "#787070")
         .attr("stroke-width", 1)
@@ -137,7 +216,7 @@ function drawChart() {
         .join("rect")
         .attr("class", "note-rect")
         .attr("x", (d) => x(d))
-        .attr("y", 22)
+        .attr("y", 24)
         .attr("height", 50)
         .attr("width", (d, i) => {
             const nextIndex = i + 1
@@ -166,7 +245,7 @@ function animate() {
     drawChart()
 
     // animate while "note" is being held
-    if (keysPressed.size > 0) {
+    if (data.keysPressed.size > 0) {
         requestAnimationFrame(animate)
     } else {
         // leave this in for testing
