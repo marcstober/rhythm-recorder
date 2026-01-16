@@ -17,13 +17,15 @@
         </div>
         <!-- TODO? Use a real button? -->
         <div id="tap-area" role="button" tabindex="0">
-            Tap any key or tap here to visualize a rhythm. Refresh the page
-            (Ctrl+r) to reset.
+            Tap any key or tap here to visualize a rhythm.
         </div>
         <div id="secondary-container">
             <div>
                 <label for="pickup-notes">Number of pickup notes:</label>
-                <input type="number" id="pickup-notes" value="0" />
+                <input type="number" id="pickup-notes" />
+                <label for="number-of-beats">Number of beats:</label>
+                <input type="number" id="number-of-beats" />
+                <button id="reset-button">Reset</button>
             </div>
             <div id="recorded-sequence"></div>
         </div>

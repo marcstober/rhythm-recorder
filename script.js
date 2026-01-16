@@ -26,12 +26,17 @@ let data = signal({
     lastKeyDownTime: null,
     firstNoteStartTime: null,
     pickupNotesCount: 0,
+    numberOfBeats: 8,
 })
 let noteStartTimes = signal([])
 
 document.addEventListener("reef:signal", function (e) {
     animate()
 })
+
+// Initialize input values from data
+document.getElementById("pickup-notes").value = data.pickupNotesCount
+document.getElementById("number-of-beats").value = data.numberOfBeats
 
 // add event handlers to UI elements
 document.getElementById("pickup-notes").addEventListener("input", () => {
@@ -40,6 +45,18 @@ document.getElementById("pickup-notes").addEventListener("input", () => {
         data.pickupNotesCount = n
     }
     // Reef takes care of redrawing chart
+})
+
+document.getElementById("number-of-beats").addEventListener("input", () => {
+    let n = parseInt(document.getElementById("number-of-beats").value)
+    if (!isNaN(n) && n > 0) {
+        data.numberOfBeats = n
+    }
+    // Reef takes care of redrawing chart
+})
+
+document.getElementById("reset-button").addEventListener("click", () => {
+    location.reload()
 })
 
 // Keys to ignore when recording notes (reserved for browser navigation, shortcuts, etc.)
@@ -87,6 +104,7 @@ function stopAndAnalyze() {
     data.mode = "analyze"
     data.keysPressed.clear()
     document.getElementById("stop-button").style.display = "none"
+    document.getElementById("tap-area").style.display = "none"
     console.log("stopAndAnalyze calling animate...")
     animate()
 }
@@ -180,7 +198,7 @@ function drawChart() {
 
     const svg = d3.create("svg").attr("width", width).attr("height", 100)
 
-    let tickValues = Array.from({ length: 21 }, (_, i) => i)
+    let tickValues = Array.from({ length: data.numberOfBeats + 1 }, (_, i) => i)
 
     let lastRecordedTime =
         data.keysPressed.size === 0
@@ -198,10 +216,13 @@ function drawChart() {
         // x axis
         const xAxis = d3
             .axisBottom(
-                d3.scaleLinear().domain([0, 20]).range([xAxisOffset, width])
+                d3
+                    .scaleLinear()
+                    .domain([0, data.numberOfBeats])
+                    .range([xAxisOffset, width])
             )
             .tickValues(tickValues)
-        // .tickFormat((d) => `${d} ms`)
+            .tickFormat(d3.format("d"))
         svg.append("g")
             .attr("transform", `translate(0, ${chartHeight + margin.top})`)
             .call(xAxis)
